@@ -87,6 +87,7 @@ public class Example02 {
                         PRESSURE_MEAN))
                 .assignTimestampsAndWatermarks(new IngestionTimeExtractor<>());
 
+
         // ***** TEMPERATURE EVENTS *****
 
         // Warning pattern: Two consecutive temperature events whose temperature is higher than
@@ -189,6 +190,9 @@ public class Example02 {
                     }
                 });
 
+
+        // ***** UNION TWO STREAMS *****
+
         // Union two types of alerts into one data stream
         DataStream<UniversalEvent> mappedTempAlerts =
                 tempAlerts.map((MapFunction<TemperatureAlert, UniversalEvent>) UniversalEvent::new);
@@ -197,6 +201,9 @@ public class Example02 {
                 presAlerts.map((MapFunction<PressureAlert, UniversalEvent>) UniversalEvent::new);
 
         DataStream<UniversalEvent> allAlerts = mappedTempAlerts.union(mappedPresAlerts);
+
+
+        // ***** PANIC ALERTS *****
 
         // Panic alert pattern: Two consecutive temperature and pressure warnings appearing
         // within a time interval of 3 seconds
