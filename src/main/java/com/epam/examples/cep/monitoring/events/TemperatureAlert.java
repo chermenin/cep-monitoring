@@ -16,30 +16,32 @@
  * limitations under the License.
  */
 
-package org.stsffap.cep.monitoring.events;
+package com.epam.examples.cep.monitoring.events;
 
-public class PowerEvent extends MonitoringEvent {
-    private double voltage;
+public class TemperatureAlert {
+    private int rackID;
 
-    public PowerEvent(int rackID, double voltage) {
-        super(rackID);
-
-        this.voltage = voltage;
+    public TemperatureAlert(int rackID) {
+        this.rackID = rackID;
     }
 
-    public void setVoltage(double voltage) {
-        this.voltage = voltage;
+    public TemperatureAlert() {
+        this(-1);
     }
 
-    public double getVoltage() {
-        return voltage;
+    public void setRackID(int rackID) {
+        this.rackID = rackID;
+    }
+
+    public int getRackID() {
+        return rackID;
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof PowerEvent) {
-            PowerEvent powerEvent = (PowerEvent) obj;
-            return powerEvent.canEquals(this) && super.equals(powerEvent) && voltage == powerEvent.voltage;
+        if (obj instanceof TemperatureAlert) {
+            TemperatureAlert other = (TemperatureAlert) obj;
+            return rackID == other.rackID;
         } else {
             return false;
         }
@@ -47,16 +49,11 @@ public class PowerEvent extends MonitoringEvent {
 
     @Override
     public int hashCode() {
-        return 41 * super.hashCode() + Double.hashCode(voltage);
-    }
-
-    @Override
-    public boolean canEquals(Object obj) {
-        return obj instanceof PowerEvent;
+        return rackID;
     }
 
     @Override
     public String toString() {
-        return "PowerEvent(" + getRackID() + ", " + voltage + ")";
+        return "TemperatureAlert(" + getRackID() + ")";
     }
 }

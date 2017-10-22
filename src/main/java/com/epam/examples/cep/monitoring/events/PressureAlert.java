@@ -16,44 +16,32 @@
  * limitations under the License.
  */
 
-package org.stsffap.cep.monitoring.events;
+package com.epam.examples.cep.monitoring.events;
 
-public class TemperatureWarning {
+public class PressureAlert {
+    private int sensorID;
 
-    private int rackID;
-    private double averageTemperature;
-
-    public TemperatureWarning(int rackID, double averageTemperature) {
-        this.rackID = rackID;
-        this.averageTemperature = averageTemperature;
+    public PressureAlert(int sensorID) {
+        this.sensorID = sensorID;
     }
 
-    public TemperatureWarning() {
-        this(-1, -1);
+    public PressureAlert() {
+        this(-1);
     }
 
-    public int getRackID() {
-        return rackID;
+    public void setSensorID(int sensorID) {
+        this.sensorID = sensorID;
     }
 
-    public void setRackID(int rackID) {
-        this.rackID = rackID;
-    }
-
-    public double getAverageTemperature() {
-        return averageTemperature;
-    }
-
-    public void setAverageTemperature(double averageTemperature) {
-        this.averageTemperature = averageTemperature;
+    public int getSensorID() {
+        return sensorID;
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof TemperatureWarning) {
-            TemperatureWarning other = (TemperatureWarning) obj;
-
-            return rackID == other.rackID && averageTemperature == other.averageTemperature;
+        if (obj instanceof PressureAlert) {
+            PressureAlert other = (PressureAlert) obj;
+            return sensorID == other.sensorID;
         } else {
             return false;
         }
@@ -61,11 +49,11 @@ public class TemperatureWarning {
 
     @Override
     public int hashCode() {
-        return 41 * rackID + Double.hashCode(averageTemperature);
+        return sensorID;
     }
 
     @Override
     public String toString() {
-        return "TemperatureWarning(" + getRackID() + ", " + averageTemperature + ")";
+        return "PressureAlert(" + sensorID + ")";
     }
 }

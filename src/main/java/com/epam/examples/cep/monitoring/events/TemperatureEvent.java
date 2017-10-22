@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.stsffap.cep.monitoring.events;
+package com.epam.examples.cep.monitoring.events;
 
 public class TemperatureEvent extends MonitoringEvent {
     private double temperature;

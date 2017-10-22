@@ -16,13 +16,11 @@
  * limitations under the License.
  */
 
-package org.stsffap.cep.monitoring.sources;
+package com.epam.examples.cep.monitoring.sources;
 
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunction;
-import org.stsffap.cep.monitoring.events.MonitoringEvent;
-import org.stsffap.cep.monitoring.events.PowerEvent;
-import org.stsffap.cep.monitoring.events.TemperatureEvent;
+import com.epam.examples.cep.monitoring.events.*;
 
 import java.util.Random;
 
@@ -72,8 +70,8 @@ public class MonitoringEventSource extends RichParallelSourceFunction<Monitoring
         int numberTasks = getRuntimeContext().getNumberOfParallelSubtasks();
         int index = getRuntimeContext().getIndexOfThisSubtask();
 
-        offset = (int)((double)maxRackId / numberTasks * index);
-        shard = (int)((double)maxRackId / numberTasks * (index + 1)) - offset;
+        offset = (int) ((double) maxRackId / numberTasks * index);
+        shard = (int) ((double) maxRackId / numberTasks * (index + 1)) - offset;
 
         random = new Random();
     }

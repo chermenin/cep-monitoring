@@ -16,28 +16,28 @@
  * limitations under the License.
  */
 
-package org.stsffap.cep.monitoring.events;
+package com.epam.examples.cep.monitoring.events;
 
-public abstract class MonitoringEvent {
-    private int rackID;
+public abstract class SensorEvent {
+    private int sensorID;
 
-    public MonitoringEvent(int rackID) {
-        this.rackID = rackID;
+    public SensorEvent(int sensorID) {
+        this.sensorID = sensorID;
     }
 
-    public int getRackID() {
-        return rackID;
+    public int getSensorID() {
+        return sensorID;
     }
 
-    public void setRackID(int rackID) {
-        this.rackID = rackID;
+    public void setSensorID(int sensorID) {
+        this.sensorID = sensorID;
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof MonitoringEvent) {
-            MonitoringEvent monitoringEvent = (MonitoringEvent) obj;
-            return monitoringEvent.canEquals(this) && rackID == monitoringEvent.rackID;
+        if (obj instanceof SensorEvent) {
+            SensorEvent sensorEvent = (SensorEvent) obj;
+            return sensorEvent.canEquals(this) && sensorID == sensorEvent.sensorID;
         } else {
             return false;
         }
@@ -45,10 +45,10 @@ public abstract class MonitoringEvent {
 
     @Override
     public int hashCode() {
-        return rackID;
+        return sensorID;
     }
 
     public boolean canEquals(Object obj) {
-        return obj instanceof MonitoringEvent;
+        return obj instanceof SensorEvent;
     }
 }

@@ -127,7 +127,7 @@ under the License.
 							<transformers>
 								<!-- add Main-Class to manifest file -->
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<mainClass>org.stsffap.cep.monitoring.CEPMonitoring</mainClass>
+									<mainClass>com.epam.examples.cep.monitoring.Example01</mainClass>
 								</transformer>
 							</transformers>
 						</configuration>

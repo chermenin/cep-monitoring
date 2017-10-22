@@ -16,8 +16,13 @@
  * limitations under the License.
  */
 
-package org.stsffap.cep.monitoring;
+package com.epam.examples.cep.monitoring;
 
+import com.epam.examples.cep.monitoring.events.MonitoringEvent;
+import com.epam.examples.cep.monitoring.events.TemperatureAlert;
+import com.epam.examples.cep.monitoring.events.TemperatureEvent;
+import com.epam.examples.cep.monitoring.events.TemperatureWarning;
+import com.epam.examples.cep.monitoring.sources.MonitoringEventSource;
 import org.apache.flink.cep.CEP;
 import org.apache.flink.cep.PatternStream;
 import org.apache.flink.cep.pattern.Pattern;
@@ -27,11 +32,6 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.IngestionTimeExtractor;
 import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.util.Collector;
-import org.stsffap.cep.monitoring.sources.MonitoringEventSource;
-import org.stsffap.cep.monitoring.events.MonitoringEvent;
-import org.stsffap.cep.monitoring.events.TemperatureEvent;
-import org.stsffap.cep.monitoring.events.TemperatureAlert;
-import org.stsffap.cep.monitoring.events.TemperatureWarning;
 
 import java.util.Map;
 
@@ -46,7 +46,7 @@ import java.util.Map;
  * whose temperatures are rising, we want to generate an alert. This is achieved by defining another CEP pattern which
  * analyzes the stream of generated temperature warnings.
  */
-public class CEPMonitoring {
+public class Example01 {
     private static final double TEMPERATURE_THRESHOLD = 100;
 
     private static final int MAX_RACK_ID = 10;
@@ -76,8 +76,8 @@ public class CEPMonitoring {
                         TEMP_MEAN))
                 .assignTimestampsAndWatermarks(new IngestionTimeExtractor<>());
 
-        // Warning pattern: Two consecutive temperature events whose temperature is higher than the given threshold
-        // appearing within a time interval of 10 seconds
+        // Warning pattern: Two consecutive temperature events whose temperature is higher than
+        // the given threshold appearing within a time interval of 10 seconds
         Pattern<MonitoringEvent, ?> warningPattern = Pattern.<MonitoringEvent>begin("first")
                 .subtype(TemperatureEvent.class)
                 .where(evt -> evt.getTemperature() >= TEMPERATURE_THRESHOLD)
@@ -97,7 +97,8 @@ public class CEPMonitoring {
                 TemperatureEvent first = (TemperatureEvent) pattern.get("first");
                 TemperatureEvent second = (TemperatureEvent) pattern.get("second");
 
-                return new TemperatureWarning(first.getRackID(), (first.getTemperature() + second.getTemperature()) / 2);
+                return new TemperatureWarning(first.getRackID(),
+                        (first.getTemperature() + second.getTemperature()) / 2);
             }
         );
 
@@ -125,7 +126,7 @@ public class CEPMonitoring {
 
         // Print the warning and alert events to stdout
         warnings.print();
-        alerts.print();
+        alerts.printToErr();
 
         env.execute("CEP monitoring job");
     }

@@ -16,32 +16,44 @@
  * limitations under the License.
  */
 
-package org.stsffap.cep.monitoring.events;
+package com.epam.examples.cep.monitoring.events;
 
-public class TemperatureAlert {
-    private int rackID;
+public class PressureWarning {
 
-    public TemperatureAlert(int rackID) {
-        this.rackID = rackID;
+    private int sensorID;
+    private double pressure;
+
+    public PressureWarning(int sensorID, double pressure) {
+        this.sensorID = sensorID;
+        this.pressure = pressure;
     }
 
-    public TemperatureAlert() {
-        this(-1);
+    public PressureWarning() {
+        this(-1, -1);
     }
 
-    public void setRackID(int rackID) {
-        this.rackID = rackID;
+    public int getSensorID() {
+        return sensorID;
     }
 
-    public int getRackID() {
-        return rackID;
+    public void setSensorID(int sensorID) {
+        this.sensorID = sensorID;
+    }
+
+    public double getPressure() {
+        return pressure;
+    }
+
+    public void setPressure(double pressure) {
+        this.pressure = pressure;
     }
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof TemperatureAlert) {
-            TemperatureAlert other = (TemperatureAlert) obj;
-            return rackID == other.rackID;
+        if (obj instanceof PressureWarning) {
+            PressureWarning other = (PressureWarning) obj;
+
+            return sensorID == other.sensorID && pressure == other.pressure;
         } else {
             return false;
         }
@@ -49,11 +61,11 @@ public class TemperatureAlert {
 
     @Override
     public int hashCode() {
-        return rackID;
+        return 41 * sensorID + Double.hashCode(pressure);
     }
 
     @Override
     public String toString() {
-        return "TemperatureAlert(" + getRackID() + ")";
+        return "PressureWarning(" + sensorID + ", " + pressure + ")";
     }
 }
