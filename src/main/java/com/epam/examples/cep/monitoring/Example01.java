@@ -26,18 +26,20 @@ import com.epam.examples.cep.monitoring.sources.MonitoringEventSource;
 import org.apache.flink.cep.CEP;
 import org.apache.flink.cep.PatternStream;
 import org.apache.flink.cep.pattern.Pattern;
+import org.apache.flink.cep.pattern.conditions.IterativeCondition;
+import org.apache.flink.cep.pattern.conditions.SimpleCondition;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.IngestionTimeExtractor;
 import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.util.Collector;
 
+import java.util.List;
 import java.util.Map;
 
 /**
  * CEP example monitoring program
- *
+ * <p>
  * This example program generates a stream of monitoring events which are analyzed using Flink's CEP library.
  * The input event stream consists of temperature and power events from a set of racks. The goal is to detect
  * when a rack is about to overheat. In order to do that, we create a CEP pattern which generates a
@@ -80,10 +82,22 @@ public class Example01 {
         // the given threshold appearing within a time interval of 10 seconds
         Pattern<MonitoringEvent, ?> warningPattern = Pattern.<MonitoringEvent>begin("first")
                 .subtype(TemperatureEvent.class)
-                .where(evt -> evt.getTemperature() >= TEMPERATURE_THRESHOLD)
+                .where(new SimpleCondition<TemperatureEvent>() {
+
+                    @Override
+                    public boolean filter(TemperatureEvent event) {
+                        return event.getTemperature() >= TEMPERATURE_THRESHOLD;
+                    }
+                })
                 .next("second")
                 .subtype(TemperatureEvent.class)
-                .where(evt -> evt.getTemperature() >= TEMPERATURE_THRESHOLD)
+                .where(new SimpleCondition<TemperatureEvent>() {
+
+                    @Override
+                    public boolean filter(TemperatureEvent event) {
+                        return event.getTemperature() >= TEMPERATURE_THRESHOLD;
+                    }
+                })
                 .within(Time.seconds(10));
 
         // Create a pattern stream from our warning pattern
@@ -93,18 +107,26 @@ public class Example01 {
 
         // Generate temperature warnings for each matched warning pattern
         DataStream<TemperatureWarning> warnings = tempPatternStream.select(
-            (Map<String, MonitoringEvent> pattern) -> {
-                TemperatureEvent first = (TemperatureEvent) pattern.get("first");
-                TemperatureEvent second = (TemperatureEvent) pattern.get("second");
+                (Map<String, List<MonitoringEvent>> pattern) -> {
+                    TemperatureEvent first = (TemperatureEvent) pattern.get("first").get(0);
+                    TemperatureEvent second = (TemperatureEvent) pattern.get("second").get(0);
 
-                return new TemperatureWarning(first.getRackID(),
-                        (first.getTemperature() + second.getTemperature()) / 2);
-            }
+                    return new TemperatureWarning(first.getRackID(),
+                            (first.getTemperature() + second.getTemperature()) / 2);
+                }
         );
 
         // Alert pattern: Two consecutive temperature warnings appearing within a time interval of 20 seconds
         Pattern<TemperatureWarning, ?> alertPattern = Pattern.<TemperatureWarning>begin("first")
                 .next("second")
+                .where(new IterativeCondition<TemperatureWarning>() {
+
+                    @Override
+                    public boolean filter(TemperatureWarning warning, Context<TemperatureWarning> context) {
+                        TemperatureWarning first = context.getEventsForPattern("first").iterator().next();
+                        return warning.getAverageTemperature() > first.getAverageTemperature();
+                    }
+                })
                 .within(Time.seconds(20));
 
         // Create a pattern stream from our alert pattern
@@ -114,15 +136,11 @@ public class Example01 {
 
         // Generate a temperature alert only iff the second temperature warning's average temperature is higher than
         // first warning's temperature
-        DataStream<TemperatureAlert> alerts = alertPatternStream.flatSelect(
-            (Map<String, TemperatureWarning> pattern, Collector<TemperatureAlert> out) -> {
-                TemperatureWarning first = pattern.get("first");
-                TemperatureWarning second = pattern.get("second");
-
-                if (first.getAverageTemperature() < second.getAverageTemperature()) {
-                    out.collect(new TemperatureAlert(first.getRackID()));
-                }
-            });
+        DataStream<TemperatureAlert> alerts = alertPatternStream.select(
+                (Map<String, List<TemperatureWarning>> pattern) -> {
+                    TemperatureWarning first = pattern.get("first").get(0);
+                    return new TemperatureAlert(first.getRackID());
+                });
 
         // Print the warning and alert events to stdout
         warnings.print();

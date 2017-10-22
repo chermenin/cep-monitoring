@@ -25,13 +25,15 @@ import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.cep.CEP;
 import org.apache.flink.cep.PatternStream;
 import org.apache.flink.cep.pattern.Pattern;
+import org.apache.flink.cep.pattern.conditions.IterativeCondition;
+import org.apache.flink.cep.pattern.conditions.SimpleCondition;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.IngestionTimeExtractor;
 import org.apache.flink.streaming.api.windowing.time.Time;
-import org.apache.flink.util.Collector;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -94,10 +96,22 @@ public class Example02 {
         // the given threshold appearing within a time interval of 10 seconds
         Pattern<MonitoringEvent, ?> tempWarningPattern = Pattern.<MonitoringEvent>begin("first")
                 .subtype(TemperatureEvent.class)
-                .where(evt -> evt.getTemperature() >= TEMPERATURE_THRESHOLD)
+                .where(new SimpleCondition<TemperatureEvent>() {
+
+                    @Override
+                    public boolean filter(TemperatureEvent event) {
+                        return event.getTemperature() >= TEMPERATURE_THRESHOLD;
+                    }
+                })
                 .next("second")
                 .subtype(TemperatureEvent.class)
-                .where(evt -> evt.getTemperature() >= TEMPERATURE_THRESHOLD)
+                .where(new SimpleCondition<TemperatureEvent>() {
+
+                    @Override
+                    public boolean filter(TemperatureEvent event) {
+                        return event.getTemperature() >= TEMPERATURE_THRESHOLD;
+                    }
+                })
                 .within(Time.seconds(10));
 
         // Create a pattern stream from our warning pattern
@@ -107,9 +121,9 @@ public class Example02 {
 
         // Generate temperature warnings for each matched warning pattern
         DataStream<TemperatureWarning> tempWarnings = tempWarningPatternStream.select(
-                (Map<String, MonitoringEvent> pattern) -> {
-                    TemperatureEvent first = (TemperatureEvent) pattern.get("first");
-                    TemperatureEvent second = (TemperatureEvent) pattern.get("second");
+                (Map<String, List<MonitoringEvent>> pattern) -> {
+                    TemperatureEvent first = (TemperatureEvent) pattern.get("first").get(0);
+                    TemperatureEvent second = (TemperatureEvent) pattern.get("second").get(0);
 
                     return new TemperatureWarning(first.getRackID(),
                             (first.getTemperature() + second.getTemperature()) / 2);
@@ -119,6 +133,14 @@ public class Example02 {
         // Alert pattern: Two consecutive temperature warnings appearing within a time interval of 20 seconds
         Pattern<TemperatureWarning, ?> tempAlertPattern = Pattern.<TemperatureWarning>begin("first")
                 .next("second")
+                .where(new IterativeCondition<TemperatureWarning>() {
+
+                    @Override
+                    public boolean filter(TemperatureWarning warning, Context<TemperatureWarning> context) {
+                        TemperatureWarning first = context.getEventsForPattern("first").iterator().next();
+                        return warning.getAverageTemperature() > first.getAverageTemperature();
+                    }
+                })
                 .within(Time.seconds(20));
 
         // Create a pattern stream from our alert pattern
@@ -128,14 +150,10 @@ public class Example02 {
 
         // Generate a temperature alert only if the second temperature warning's average temperature
         // is higher than first warning's temperature
-        DataStream<TemperatureAlert> tempAlerts = tempAlertPatternStream.flatSelect(
-                (Map<String, TemperatureWarning> pattern, Collector<TemperatureAlert> out) -> {
-                    TemperatureWarning first = pattern.get("first");
-                    TemperatureWarning second = pattern.get("second");
-
-                    if (first.getAverageTemperature() < second.getAverageTemperature()) {
-                        out.collect(new TemperatureAlert(first.getRackID()));
-                    }
+        DataStream<TemperatureAlert> tempAlerts = tempAlertPatternStream.select(
+                (Map<String, List<TemperatureWarning>> pattern) -> {
+                    TemperatureWarning first = pattern.get("first").get(0);
+                    return new TemperatureAlert(first.getRackID());
                 });
 
 
@@ -145,10 +163,22 @@ public class Example02 {
         // the given threshold appearing within a time interval of 10 seconds
         Pattern<SensorEvent, ?> presWarningPattern = Pattern.<SensorEvent>begin("first")
                 .subtype(PressureEvent.class)
-                .where(evt -> evt.getPressure() >= PRESSURE_THRESHOLD)
+                .where(new SimpleCondition<PressureEvent>() {
+
+                    @Override
+                    public boolean filter(PressureEvent event) {
+                        return event.getPressure() >= PRESSURE_THRESHOLD;
+                    }
+                })
                 .next("second")
                 .subtype(PressureEvent.class)
-                .where(evt -> evt.getPressure() >= PRESSURE_THRESHOLD)
+                .where(new SimpleCondition<PressureEvent>() {
+
+                    @Override
+                    public boolean filter(PressureEvent event) {
+                        return event.getPressure() >= PRESSURE_THRESHOLD;
+                    }
+                })
                 .within(Time.seconds(10));
 
 
@@ -159,9 +189,9 @@ public class Example02 {
 
         // Generate temperature warnings for each matched warning pattern
         DataStream<PressureWarning> presWarnings = presWarningPatternStream.select(
-                (Map<String, SensorEvent> pattern) -> {
-                    PressureEvent first = (PressureEvent) pattern.get("first");
-                    PressureEvent second = (PressureEvent) pattern.get("second");
+                (Map<String, List<SensorEvent>> pattern) -> {
+                    PressureEvent first = (PressureEvent) pattern.get("first").get(0);
+                    PressureEvent second = (PressureEvent) pattern.get("second").get(0);
 
                     return new PressureWarning(first.getSensorID(),
                             Math.max(first.getPressure(), second.getPressure()));
@@ -171,6 +201,14 @@ public class Example02 {
         // Alert pattern: Two consecutive pressure warnings appearing within a time interval of 20 seconds
         Pattern<PressureWarning, ?> presAlertPattern = Pattern.<PressureWarning>begin("first")
                 .next("second")
+                .where(new IterativeCondition<PressureWarning>() {
+
+                    @Override
+                    public boolean filter(PressureWarning warning, Context<PressureWarning> context) {
+                        PressureWarning first = context.getEventsForPattern("first").iterator().next();
+                        return warning.getPressure() > first.getPressure();
+                    }
+                })
                 .within(Time.seconds(20));
 
         // Create a pattern stream from our alert pattern
@@ -180,14 +218,10 @@ public class Example02 {
 
         // Generate a pressure alert only if the second temperature warning's max pressure is higher than
         // first warning's pressure
-        DataStream<PressureAlert> presAlerts = presAlertPatternStream.flatSelect(
-                (Map<String, PressureWarning> pattern, Collector<PressureAlert> out) -> {
-                    PressureWarning first = pattern.get("first");
-                    PressureWarning second = pattern.get("second");
-
-                    if (first.getPressure() < second.getPressure()) {
-                        out.collect(new PressureAlert(first.getSensorID()));
-                    }
+        DataStream<PressureAlert> presAlerts = presAlertPatternStream.select(
+                (Map<String, List<PressureWarning>> pattern) -> {
+                    PressureWarning first = pattern.get("first").get(0);
+                    return new PressureAlert(first.getSensorID());
                 });
 
 
@@ -209,6 +243,14 @@ public class Example02 {
         // within a time interval of 3 seconds
         Pattern<UniversalEvent, ?> panicAlertPattern = Pattern.<UniversalEvent>begin("first")
                 .next("second")
+                .where(new IterativeCondition<UniversalEvent>() {
+
+                    @Override
+                    public boolean filter(UniversalEvent event, Context<UniversalEvent> context) {
+                        UniversalEvent first = context.getEventsForPattern("first").iterator().next();
+                        return !first.getEventClass().equals(event.getEventClass());
+                    }
+                })
                 .within(Time.seconds(5));
 
         // Create a pattern stream from our alert pattern
@@ -216,22 +258,21 @@ public class Example02 {
                 allAlerts, panicAlertPattern);
 
         // Generate a panic alert
-        DataStream<PanicAlert> panicAlerts = panicAlertPatternStream.flatSelect(
-                (Map<String, UniversalEvent> pattern, Collector<PanicAlert> out) -> {
-                    UniversalEvent first = pattern.get("first");
-                    UniversalEvent second = pattern.get("second");
-                    if (!first.getEventClass().equals(second.getEventClass())) {
-                        TemperatureAlert tempAlert;
-                        PressureAlert presAlert;
-                        if (first.getEventClass().equals(TemperatureAlert.class)) {
-                            tempAlert = (TemperatureAlert) first.getEvent();
-                            presAlert = (PressureAlert) second.getEvent();
-                        } else {
-                            presAlert = (PressureAlert) first.getEvent();
-                            tempAlert = (TemperatureAlert) second.getEvent();
-                        }
-                        out.collect(new PanicAlert(tempAlert.getRackID(), presAlert.getSensorID()));
+        DataStream<PanicAlert> panicAlerts = panicAlertPatternStream.select(
+                (Map<String, List<UniversalEvent>> pattern) -> {
+                    UniversalEvent first = pattern.get("first").get(0);
+                    UniversalEvent second = pattern.get("second").get(0);
+
+                    TemperatureAlert tempAlert;
+                    PressureAlert presAlert;
+                    if (first.getEventClass().equals(TemperatureAlert.class)) {
+                        tempAlert = (TemperatureAlert) first.getEvent();
+                        presAlert = (PressureAlert) second.getEvent();
+                    } else {
+                        presAlert = (PressureAlert) first.getEvent();
+                        tempAlert = (TemperatureAlert) second.getEvent();
                     }
+                    return new PanicAlert(tempAlert.getRackID(), presAlert.getSensorID());
                 });
 
         panicAlerts.printToErr();
