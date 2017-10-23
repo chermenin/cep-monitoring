@@ -64,6 +64,7 @@ public class Example02 {
     public static void main(String[] args) throws Exception {
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.getConfig().disableSysoutLogging();
 
         // Use ingestion time => TimeCharacteristic == EventTime + IngestionTimeExtractor
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
@@ -275,7 +276,7 @@ public class Example02 {
                     return new PanicAlert(tempAlert.getRackID(), presAlert.getSensorID());
                 });
 
-        panicAlerts.printToErr();
+        panicAlerts.print();
 
         env.execute("CEP monitoring job");
     }

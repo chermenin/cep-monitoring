@@ -11,6 +11,10 @@ public class PanicAlert {
         this.sensorID = sensorID;
     }
 
+    public PanicAlert() {
+        this(-1, -1);
+    }
+
     public int getRackID() {
         return rackID;
     }

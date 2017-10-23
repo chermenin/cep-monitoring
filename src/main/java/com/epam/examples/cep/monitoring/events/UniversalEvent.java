@@ -25,6 +25,10 @@ public class UniversalEvent {
         this.event = event;
     }
 
+    public UniversalEvent() {
+        this(null);
+    }
+
     public Object getEvent() {
         return event;
     }

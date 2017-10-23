@@ -62,6 +62,7 @@ public class Example01 {
     public static void main(String[] args) throws Exception {
 
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
+        env.getConfig().disableSysoutLogging();
 
         // Use ingestion time => TimeCharacteristic == EventTime + IngestionTimeExtractor
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);

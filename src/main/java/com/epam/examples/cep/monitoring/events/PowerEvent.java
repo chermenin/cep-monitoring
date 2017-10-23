@@ -27,6 +27,10 @@ public class PowerEvent extends MonitoringEvent {
         this.voltage = voltage;
     }
 
+    public PowerEvent() {
+        this(-1, -1);
+    }
+
     public void setVoltage(double voltage) {
         this.voltage = voltage;
     }

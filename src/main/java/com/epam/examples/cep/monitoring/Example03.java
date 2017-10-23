@@ -1,8 +1,6 @@
 package com.epam.examples.cep.monitoring;
 
-import com.epam.examples.cep.monitoring.events.MonitoringEvent;
-import com.epam.examples.cep.monitoring.events.SensorEvent;
-import com.epam.examples.cep.monitoring.events.TemperatureEvent;
+import com.epam.examples.cep.monitoring.events.*;
 import com.epam.examples.cep.monitoring.sources.MonitoringEventSource;
 import com.epam.examples.cep.monitoring.sources.SensorEventSource;
 import org.apache.flink.api.common.functions.FilterFunction;
@@ -17,6 +15,12 @@ import org.apache.flink.streaming.api.datastream.DataStream;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.IngestionTimeExtractor;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.stream.Collectors;
 
 public class Example03 {
     private static final long PAUSE = 100;
@@ -41,9 +45,10 @@ public class Example03 {
 
         // Use ingestion time => TimeCharacteristic == EventTime + IngestionTimeExtractor
         env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);
+        env.getConfig().disableSysoutLogging();
 
         // Create Siddhi CEP environment
-        SiddhiCEP cep = SiddhiCEP.getSiddhiEnvironment(env);
+        SiddhiCEP cep = SiddhiCEP.getExtendedSiddhiEnvironment(env);
 
         // Input stream of monitoring events
         DataStream<MonitoringEvent> inputMonitoringEventStream = env
@@ -68,34 +73,53 @@ public class Example03 {
 
 
         // ***** TEMPERATURE EVENTS *****
+
         DataStream<Tuple2<Integer, Double>> tempEvents = inputMonitoringEventStream
                 .filter((MonitoringEvent event) -> event.getClass().equals(TemperatureEvent.class))
                 .map((MonitoringEvent event) -> (TemperatureEvent) event)
                 .map((TemperatureEvent event) -> new Tuple2<>(event.getRackID(), event.getTemperature()))
                 .returns(TupleTypeInfo.getBasicTupleTypeInfo(Integer.class, Double.class));
 
-        DataStream<Tuple2<Integer, Double>> tempWarnings = cep.from("tempEvents", tempEvents, "rackID", "temperature")
-                .cql("from every e1 = tempEvents[temperature > " + TEMPERATURE_THRESHOLD + "] -> " +
-                        "e2 = tempEvents[temperature > " + TEMPERATURE_THRESHOLD + " and rackID == e1.rackID] " +
-                        "within 10 seconds " +
-                        "select e1.rackID, (e1.temperature + e2.temperature) / 2 as temperature " +
-                        "insert into tempWarnings")
-                .returns("tempWarnings");
-
-        DataStream<Tuple1<Integer>> tempAlerts = cep.from("tempWarnings", tempWarnings, "rackID", "temperature")
-                .cql("from every e1 = tempWarnings -> " +
-                        "e2 = tempWarnings[rackID == e1.rackID and temperature > e1.temperature] " +
-                        "within 20 seconds " +
-                        "select e1.rackID insert into output")
-                .returns("output");
-
-        tempAlerts.print();
 
         // ***** PRESSURE EVENTS *****
+
+        DataStream<Tuple2<Integer, Double>> presEvents = inputSensorEventStream
+                .filter((SensorEvent event) -> event.getClass().equals(PressureEvent.class))
+                .map((SensorEvent event) -> (PressureEvent) event)
+                .map((PressureEvent event) -> new Tuple2<>(event.getSensorID(), event.getPressure()))
+                .returns(TupleTypeInfo.getBasicTupleTypeInfo(Integer.class, Double.class));
 
 
         // ***** PANIC ALERTS *****
 
+        cep.registerStream("tempEvents", tempEvents, "rackID", "temperature");
+        cep.registerStream("presEvents", presEvents, "sensorID", "pressure");
+
+        String query = readResource("query.cql")
+                .replace("${TEMPERATURE_THRESHOLD}", "" + TEMPERATURE_THRESHOLD)
+                .replace("${PRESSURE_THRESHOLD}", "" + PRESSURE_THRESHOLD);
+
+        DataStream<Tuple2<Integer, Integer>> cepOutput = cep.from("tempEvents").union("presEvents")
+                .cql(query)
+                .returns("output");
+
+        DataStream<PanicAlert> panicAlerts = cepOutput
+                .map((Tuple2<Integer, Integer> value) -> new PanicAlert(value.f0, value.f1))
+                .returns(PanicAlert.class);
+
+        panicAlerts.print();
+
         env.execute("CEP monitoring job");
+    }
+
+    private static String readResource(String name) {
+        ClassLoader classloader = Thread.currentThread().getContextClassLoader();
+        try (InputStream inputStream = classloader.getResourceAsStream(name);
+             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))
+        ) {
+            return reader.lines().collect(Collectors.joining("\n"));
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

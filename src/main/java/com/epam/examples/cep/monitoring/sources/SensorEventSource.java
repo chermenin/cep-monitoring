@@ -23,6 +23,7 @@ import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunctio
 import com.epam.examples.cep.monitoring.events.*;
 
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class SensorEventSource extends RichParallelSourceFunction<SensorEvent> {
 
@@ -69,7 +70,7 @@ public class SensorEventSource extends RichParallelSourceFunction<SensorEvent> {
             int sensorId = random.nextInt(shard) + offset;
             double pressure = random.nextGaussian() * pressureStd + pressureMean;
             sourceContext.collect(new PressureEvent(sensorId, pressure));
-            Thread.sleep(pause);
+            Thread.sleep(ThreadLocalRandom.current().nextLong(pause) + pause / 2);
         }
     }
 

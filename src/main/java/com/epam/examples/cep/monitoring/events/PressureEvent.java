@@ -23,8 +23,11 @@ public class PressureEvent extends SensorEvent {
 
     public PressureEvent(int sensorID, double pressure) {
         super(sensorID);
-
         this.pressure = pressure;
+    }
+
+    public PressureEvent() {
+        this(-1, -1);
     }
 
     public double getPressure() {

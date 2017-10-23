@@ -23,6 +23,7 @@ import org.apache.flink.streaming.api.functions.source.RichParallelSourceFunctio
 import com.epam.examples.cep.monitoring.events.*;
 
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class MonitoringEventSource extends RichParallelSourceFunction<MonitoringEvent> {
 
@@ -93,7 +94,7 @@ public class MonitoringEventSource extends RichParallelSourceFunction<Monitoring
 
             sourceContext.collect(monitoringEvent);
 
-            Thread.sleep(pause);
+            Thread.sleep(ThreadLocalRandom.current().nextLong(pause) + pause / 2);
         }
     }
 

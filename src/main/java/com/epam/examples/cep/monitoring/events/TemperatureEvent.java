@@ -23,8 +23,11 @@ public class TemperatureEvent extends MonitoringEvent {
 
     public TemperatureEvent(int rackID, double temperature) {
         super(rackID);
-
         this.temperature = temperature;
+    }
+
+    public TemperatureEvent() {
+        this(-1, -1);
     }
 
     public double getTemperature() {
