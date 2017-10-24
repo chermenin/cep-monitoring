@@ -25,7 +25,7 @@ within 10 seconds
 select e1.sensorID, math:max(e1.pressure, e2.pressure) as pressure
 insert into presWarnings;
 
---- Generate temperature alerts
+--- Generate pressure alerts
 
 from every
     e1 = presWarnings ->
